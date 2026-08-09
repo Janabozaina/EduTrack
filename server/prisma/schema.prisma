@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+enum AttendanceMethod {
+  MANUAL
+  QR
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+}
+
+model User {
+  id       String   @id @default(cuid())
+  name     String
+  email    String   @unique
+  password String
+  role     UserRole @default(TEACHER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Class {
+  id    String @id @default(cuid())
+  title String
+
+  groups   Group[]
+  students Student[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Group {
+  id        String  @id @default(cuid())
+  name      String
+  day       String?
+  startTime String?
+  room      String?
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id])
+
+  students Student[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Student {
+  id String @id @default(cuid())
+
+  studentCode String @unique
+
+  name String
+
+  phone String?
+
+  parentPhone String?
+
+  address String?
+
+  birthDate DateTime?
+
+  photo String?
+
+  monthlyFee Float @default(0)
+
+  isActive Boolean @default(true)
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id])
+
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id])
+
+  attendances Attendance[]
+
+  payments Payment[]
+
+  notes Note[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Attendance {
+  id String @id @default(cuid())
+
+  date DateTime
+
+  status AttendanceStatus
+
+  method AttendanceMethod
+
+  studentId String
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model AttendanceSession {
+  id         String   @id @default(cuid())
+
+  token      String   @unique
+
+  expiresAt  DateTime
+
+  isActive   Boolean  @default(true)
+
+  createdAt  DateTime @default(now())
+}
+
+model Payment {
+  id String @id @default(cuid())
+
+  month Int
+
+  year Int
+
+  amount Float
+
+  status PaymentStatus
+
+  paidAt DateTime?
+
+  studentId String
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Note {
+  id String @id @default(cuid())
+
+  content String
+
+  studentId String
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
