@@ -14,6 +14,8 @@ export default function Input(props: Props) {
         bg-slate-50
         px-4
         py-3
+        text-slate-800
+        placeholder:text-slate-500
         outline-none
         transition-all
         focus:ring-2
@@ -23,3 +25,4 @@ export default function Input(props: Props) {
     />
   );
 }
+
