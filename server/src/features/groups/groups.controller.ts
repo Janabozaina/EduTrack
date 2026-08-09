@@ -1,51 +1,113 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import {
   createGroupService,
   deleteGroupService,
   getGroupsService,
   updateGroupService,
 } from "./groups.service";
+import { AuthRequest } from "../../shared/middleware/auth.middleware";
 
-export const createGroup = async (req: Request, res: Response) => {
+export const createGroup = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
+
   const result = await createGroupService(
     req.body.name as string,
     req.body.classId as string,
+    req.user.id,
     req.body.day as string | undefined,
     req.body.startTime as string | undefined,
     req.body.room as string | undefined
   );
+
+  if (!result.success) {
+    return res.status(400).json(result);
+  }
 
   return res.status(201).json(result);
 };
 
-export const getGroups = async (req: Request, res: Response) => {
-  const classId = req.query.classId as string | undefined;
-  const groups = await getGroupsService(classId);
+export const getGroups = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
 
-  return res.status(200).json({ success: true, data: groups });
+  const classId = req.query.classId as string | undefined;
+
+  const groups = await getGroupsService(
+    req.user.id,
+    classId
+  );
+
+  return res.status(200).json({
+    success: true,
+    data: groups,
+  });
 };
 
-export const updateGroup = async (req: Request, res: Response) => {
+export const updateGroup = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
+
   const id = req.params.id as string;
 
-  const group = await updateGroupService(
+  const result = await updateGroupService(
     id,
     req.body.name as string,
+    req.user.id,
     req.body.day as string | undefined,
     req.body.startTime as string | undefined,
     req.body.room as string | undefined
   );
 
-  return res.status(200).json(group);
+  if (!result.success) {
+    return res.status(404).json(result);
+  }
+
+  return res.status(200).json(result);
 };
 
-export const deleteGroup = async (req: Request, res: Response) => {
+export const deleteGroup = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
+
   const id = req.params.id as string;
 
-  await deleteGroupService(id);
+  const result = await deleteGroupService(
+    id,
+    req.user.id
+  );
 
-  return res.status(200).json({
-    success: true,
-    message: "Group deleted successfully.",
-  });
+  if (!result.success) {
+    return res.status(404).json(result);
+  }
+
+  return res.status(200).json(result);
 };

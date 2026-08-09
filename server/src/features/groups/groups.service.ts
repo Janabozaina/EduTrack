@@ -3,12 +3,16 @@ import prisma from "../../shared/lib/prisma";
 export const createGroupService = async (
   name: string,
   classId: string,
+  userId: string,
   day?: string,
   startTime?: string,
   room?: string
 ) => {
-  const classExists = await prisma.class.findUnique({
-    where: { id: classId },
+  const classExists = await prisma.class.findFirst({
+    where: {
+      id: classId,
+      userId,
+    },
   });
 
   if (!classExists) {
@@ -35,10 +39,21 @@ export const createGroupService = async (
   };
 };
 
-export const getGroupsService = async (classId?: string) => {
-  const where = classId ? { classId } : undefined;
+export const getGroupsService = async (
+  userId: string,
+  classId?: string
+) => {
+  const where: any = {
+    class: {
+      userId,
+    },
+  };
 
-  return prisma.group.findMany({
+  if (classId) {
+    where.classId = classId;
+  }
+
+  const groups = await prisma.group.findMany({
     where,
     include: {
       class: true,
@@ -52,17 +67,38 @@ export const getGroupsService = async (classId?: string) => {
       createdAt: "desc",
     },
   });
+
+  return groups;
 };
 
 export const updateGroupService = async (
   id: string,
   name: string,
+  userId: string,
   day?: string,
   startTime?: string,
   room?: string
 ) => {
-  return prisma.group.update({
-    where: { id },
+  const exists = await prisma.group.findFirst({
+    where: {
+      id,
+      class: {
+        userId,
+      },
+    },
+  });
+
+  if (!exists) {
+    return {
+      success: false,
+      message: "Group not found.",
+    };
+  }
+
+  const group = await prisma.group.update({
+    where: {
+      id,
+    },
     data: {
       name,
       day,
@@ -70,12 +106,42 @@ export const updateGroupService = async (
       room,
     },
   });
+
+  return {
+    success: true,
+    message: "Group updated successfully.",
+    data: group,
+  };
 };
 
-export const deleteGroupService = async (id: string) => {
-  return prisma.group.delete({
+export const deleteGroupService = async (
+  id: string,
+  userId: string
+) => {
+  const exists = await prisma.group.findFirst({
+    where: {
+      id,
+      class: {
+        userId,
+      },
+    },
+  });
+
+  if (!exists) {
+    return {
+      success: false,
+      message: "Group not found.",
+    };
+  }
+
+  await prisma.group.delete({
     where: {
       id,
     },
   });
+
+  return {
+    success: true,
+    message: "Group deleted successfully.",
+  };
 };

@@ -1,8 +1,14 @@
 import prisma from "../../shared/lib/prisma";
 
-export const createClassService = async (title: string) => {
+export const createClassService = async (
+  title: string,
+  userId: string
+) => {
   const exists = await prisma.class.findFirst({
-    where: { title },
+    where: {
+      title,
+      userId,
+    },
   });
 
   if (exists) {
@@ -13,7 +19,10 @@ export const createClassService = async (title: string) => {
   }
 
   const newClass = await prisma.class.create({
-    data: { title },
+    data: {
+      title,
+      userId,
+    },
   });
 
   return {
@@ -23,8 +32,11 @@ export const createClassService = async (title: string) => {
   };
 };
 
-export const getClassesService = async () => {
+export const getClassesService = async (userId: string) => {
   const classes = await prisma.class.findMany({
+    where: {
+      userId,
+    },
     orderBy: {
       createdAt: "desc",
     },
@@ -46,10 +58,14 @@ export const getClassesService = async () => {
 
 export const updateClassService = async (
   id: string,
-  title: string
+  title: string,
+  userId: string
 ) => {
-  const exists = await prisma.class.findUnique({
-    where: { id },
+  const exists = await prisma.class.findFirst({
+    where: {
+      id,
+      userId,
+    },
   });
 
   if (!exists) {
@@ -60,8 +76,12 @@ export const updateClassService = async (
   }
 
   const updated = await prisma.class.update({
-    where: { id },
-    data: { title },
+    where: {
+      id,
+    },
+    data: {
+      title,
+    },
   });
 
   return {
@@ -71,9 +91,15 @@ export const updateClassService = async (
   };
 };
 
-export const deleteClassService = async (id: string) => {
-  const exists = await prisma.class.findUnique({
-    where: { id },
+export const deleteClassService = async (
+  id: string,
+  userId: string
+) => {
+  const exists = await prisma.class.findFirst({
+    where: {
+      id,
+      userId,
+    },
   });
 
   if (!exists) {
@@ -84,7 +110,9 @@ export const deleteClassService = async (id: string) => {
   }
 
   await prisma.class.delete({
-    where: { id },
+    where: {
+      id,
+    },
   });
 
   return {

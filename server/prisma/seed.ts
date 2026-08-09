@@ -10,7 +10,8 @@ async function main() {
   // =========================
   // ADMIN ACCOUNT - YOU
   // =========================
-  await prisma.user.upsert({
+
+  const admin = await prisma.user.upsert({
     where: {
       email: "admin@edutrack.com",
     },
@@ -28,8 +29,25 @@ async function main() {
   console.log("✅ Admin account ready.");
 
   // =========================
+  // ASSIGN EXISTING CLASSES
+  // TO ADMIN
+  // =========================
+
+  await prisma.class.updateMany({
+    where: {
+      userId: null,
+    },
+    data: {
+      userId: admin.id,
+    },
+  });
+
+  console.log("✅ Existing classes assigned to Admin.");
+
+  // =========================
   // TEACHER ACCOUNT - CLIENT
   // =========================
+
   await prisma.user.upsert({
     where: {
       email: "teacher@edutrack.com",
@@ -49,7 +67,10 @@ async function main() {
 }
 
 main()
-  .catch(console.error)
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
   .finally(async () => {
     await prisma.$disconnect();
   });

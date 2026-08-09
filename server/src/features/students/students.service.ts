@@ -17,10 +17,14 @@ interface StudentData {
   isActive?: boolean;
 }
 
-export const createStudentService = async (data: StudentData) => {
-  const classExists = await prisma.class.findUnique({
+export const createStudentService = async (
+  data: StudentData,
+  userId: string
+) => {
+  const classExists = await prisma.class.findFirst({
     where: {
       id: data.classId,
+      userId,
     },
   });
 
@@ -31,9 +35,13 @@ export const createStudentService = async (data: StudentData) => {
     };
   }
 
-  const groupExists = await prisma.group.findUnique({
+  const groupExists = await prisma.group.findFirst({
     where: {
       id: data.groupId,
+      classId: data.classId,
+      class: {
+        userId,
+      },
     },
   });
 
@@ -59,6 +67,7 @@ export const createStudentService = async (data: StudentData) => {
 };
 
 export const getStudentsService = async (
+  userId: string,
   search?: string,
   classId?: string,
   groupId?: string,
@@ -67,7 +76,11 @@ export const getStudentsService = async (
 ) => {
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  const where: any = {
+    class: {
+      userId,
+    },
+  };
 
   if (search) {
     where.OR = [
@@ -122,11 +135,15 @@ export const getStudentsService = async (
 
 export const updateStudentService = async (
   id: string,
-  data: StudentData
+  data: StudentData,
+  userId: string
 ) => {
-  const exists = await prisma.student.findUnique({
+  const exists = await prisma.student.findFirst({
     where: {
       id,
+      class: {
+        userId,
+      },
     },
   });
 
@@ -134,6 +151,37 @@ export const updateStudentService = async (
     return {
       success: false,
       message: "Student not found.",
+    };
+  }
+
+  const classExists = await prisma.class.findFirst({
+    where: {
+      id: data.classId,
+      userId,
+    },
+  });
+
+  if (!classExists) {
+    return {
+      success: false,
+      message: "Class not found.",
+    };
+  }
+
+  const groupExists = await prisma.group.findFirst({
+    where: {
+      id: data.groupId,
+      classId: data.classId,
+      class: {
+        userId,
+      },
+    },
+  });
+
+  if (!groupExists) {
+    return {
+      success: false,
+      message: "Group not found.",
     };
   }
 
@@ -151,10 +199,16 @@ export const updateStudentService = async (
   };
 };
 
-export const deleteStudentService = async (id: string) => {
-  const exists = await prisma.student.findUnique({
+export const deleteStudentService = async (
+  id: string,
+  userId: string
+) => {
+  const exists = await prisma.student.findFirst({
     where: {
       id,
+      class: {
+        userId,
+      },
     },
   });
 

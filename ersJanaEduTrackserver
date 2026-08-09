@@ -1,0 +1,109 @@
+[1mdiff --git a/server/src/features/classes/classes.service.ts b/server/src/features/classes/classes.service.ts[m
+[1mindex ec36c3b..2c12d32 100644[m
+[1m--- a/server/src/features/classes/classes.service.ts[m
+[1m+++ b/server/src/features/classes/classes.service.ts[m
+[36m@@ -1,8 +1,14 @@[m
+ import prisma from "../../shared/lib/prisma";[m
+ [m
+[31m-export const createClassService = async (title: string) => {[m
+[32m+[m[32mexport const createClassService = async ([m
+[32m+[m[32m  title: string,[m
+[32m+[m[32m  userId: string[m
+[32m+[m[32m) => {[m
+   const exists = await prisma.class.findFirst({[m
+[31m-    where: { title },[m
+[32m+[m[32m    where: {[m
+[32m+[m[32m      title,[m
+[32m+[m[32m      userId,[m
+[32m+[m[32m    },[m
+   });[m
+ [m
+   if (exists) {[m
+[36m@@ -13,7 +19,10 @@[m [mexport const createClassService = async (title: string) => {[m
+   }[m
+ [m
+   const newClass = await prisma.class.create({[m
+[31m-    data: { title },[m
+[32m+[m[32m    data: {[m
+[32m+[m[32m      title,[m
+[32m+[m[32m      userId,[m
+[32m+[m[32m    },[m
+   });[m
+ [m
+   return {[m
+[36m@@ -23,8 +32,11 @@[m [mexport const createClassService = async (title: string) => {[m
+   };[m
+ };[m
+ [m
+[31m-export const getClassesService = async () => {[m
+[32m+[m[32mexport const getClassesService = async (userId: string) => {[m
+   const classes = await prisma.class.findMany({[m
+[32m+[m[32m    where: {[m
+[32m+[m[32m      userId,[m
+[32m+[m[32m    },[m
+     orderBy: {[m
+       createdAt: "desc",[m
+     },[m
+[36m@@ -46,10 +58,14 @@[m [mexport const getClassesService = async () => {[m
+ [m
+ export const updateClassService = async ([m
+   id: string,[m
+[31m-  title: string[m
+[32m+[m[32m  title: string,[m
+[32m+[m[32m  userId: string[m
+ ) => {[m
+[31m-  const exists = await prisma.class.findUnique({[m
+[31m-    where: { id },[m
+[32m+[m[32m  const exists = await prisma.class.findFirst({[m
+[32m+[m[32m    where: {[m
+[32m+[m[32m      id,[m
+[32m+[m[32m      userId,[m
+[32m+[m[32m    },[m
+   });[m
+ [m
+   if (!exists) {[m
+[36m@@ -60,8 +76,12 @@[m [mexport const updateClassService = async ([m
+   }[m
+ [m
+   const updated = await prisma.class.update({[m
+[31m-    where: { id },[m
+[31m-    data: { title },[m
+[32m+[m[32m    where: {[m
+[32m+[m[32m      id,[m
+[32m+[m[32m    },[m
+[32m+[m[32m    data: {[m
+[32m+[m[32m      title,[m
+[32m+[m[32m    },[m
+   });[m
+ [m
+   return {[m
+[36m@@ -71,9 +91,15 @@[m [mexport const updateClassService = async ([m
+   };[m
+ };[m
+ [m
+[31m-export const deleteClassService = async (id: string) => {[m
+[31m-  const exists = await prisma.class.findUnique({[m
+[31m-    where: { id },[m
+[32m+[m[32mexport const deleteClassService = async ([m
+[32m+[m[32m  id: string,[m
+[32m+[m[32m  userId: string[m
+[32m+[m[32m) => {[m
+[32m+[m[32m  const exists = await prisma.class.findFirst({[m
+[32m+[m[32m    where: {[m
+[32m+[m[32m      id,[m
+[32m+[m[32m      userId,[m
+[32m+[m[32m    },[m
+   });[m
+ [m
+   if (!exists) {[m
+[36m@@ -84,7 +110,9 @@[m [mexport const deleteClassService = async (id: string) => {[m
+   }[m
+ [m
+   await prisma.class.delete({[m
+[31m-    where: { id },[m
+[32m+[m[32m    where: {[m
+[32m+[m[32m      id,[m
+[32m+[m[32m    },[m
+   });[m
+ [m
+   return {[m
