@@ -1,31 +1,51 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, UserRole } from "@prisma/client";
 import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const exists = await prisma.user.findUnique({
+  const hashedAdminPassword = await bcrypt.hash("123456", 10);
+  const hashedTeacherPassword = await bcrypt.hash("123456", 10);
+
+  // =========================
+  // ADMIN ACCOUNT - YOU
+  // =========================
+  await prisma.user.upsert({
+    where: {
+      email: "admin@edutrack.com",
+    },
+    update: {
+      role: UserRole.ADMIN,
+    },
+    create: {
+      name: "Jana Admin",
+      email: "admin@edutrack.com",
+      password: hashedAdminPassword,
+      role: UserRole.ADMIN,
+    },
+  });
+
+  console.log("✅ Admin account ready.");
+
+  // =========================
+  // TEACHER ACCOUNT - CLIENT
+  // =========================
+  await prisma.user.upsert({
     where: {
       email: "teacher@edutrack.com",
     },
-  });
-
-  if (exists) {
-    console.log("✅ Teacher already exists.");
-    return;
-  }
-
-  const hashedPassword = await bcrypt.hash("123456", 10);
-
-  await prisma.user.create({
-    data: {
+    update: {
+      role: UserRole.TEACHER,
+    },
+    create: {
       name: "Main Teacher",
       email: "teacher@edutrack.com",
-      password: hashedPassword,
+      password: hashedTeacherPassword,
+      role: UserRole.TEACHER,
     },
   });
 
-  console.log("✅ Teacher created successfully.");
+  console.log("✅ Teacher account ready.");
 }
 
 main()
@@ -33,3 +53,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
