@@ -2,7 +2,7 @@
 import toast from "react-hot-toast";
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+baseURL: "https://edutrack-production-ae55.up.railway.app/api",
 });
 
 api.interceptors.request.use((config) => {
