@@ -1,3 +1,22 @@
+import type { Response } from "express";
+import { AuthRequest } from "../../shared/middleware/auth.middleware";
+
+export const getNotifications = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
+
+  const result = await getNotificationsService(req.user.id);
+
+  return res.status(200).json(result);
+};
+
 import prisma from "../../shared/lib/prisma";
 
 export type NotificationType =
@@ -33,8 +52,9 @@ const monthNames = [
   "December",
 ];
 
-export const getNotificationsService = async () => {
+export const getNotificationsService = async (userId: string) => {
   const now = new Date();
+
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
@@ -42,11 +62,17 @@ export const getNotificationsService = async () => {
   weekAgo.setDate(weekAgo.getDate() - 7);
   weekAgo.setHours(0, 0, 0, 0);
 
+  // Pending payments belonging to this user
   const pendingPayments = await prisma.payment.findMany({
     where: {
       status: "PENDING",
       month: currentMonth,
       year: currentYear,
+      student: {
+        class: {
+          userId,
+        },
+      },
     },
     include: {
       student: {
@@ -62,11 +88,17 @@ export const getNotificationsService = async () => {
     take: 10,
   });
 
+  // Recent successful payments belonging to this user
   const recentPaidPayments = await prisma.payment.findMany({
     where: {
       status: "PAID",
       paidAt: {
         gte: weekAgo,
+      },
+      student: {
+        class: {
+          userId,
+        },
       },
     },
     include: {
@@ -83,11 +115,17 @@ export const getNotificationsService = async () => {
     take: 8,
   });
 
+  // Recent absences belonging to this user
   const recentAbsences = await prisma.attendance.findMany({
     where: {
       status: "ABSENT",
       date: {
         gte: weekAgo,
+      },
+      student: {
+        class: {
+          userId,
+        },
       },
     },
     include: {
@@ -111,7 +149,9 @@ export const getNotificationsService = async () => {
       id: `payment-reminder-${payment.id}`,
       type: "payment-reminder",
       title: "Payment reminder",
-      description: `${payment.student.name} has a pending payment for ${monthNames[payment.month - 1]} ${payment.year}.`,
+      description: `${payment.student.name} has a pending payment for ${
+        monthNames[payment.month - 1]
+      } ${payment.year}.`,
       createdAt: payment.createdAt,
       studentId: payment.student.id,
       studentName: payment.student.name,
@@ -126,7 +166,9 @@ export const getNotificationsService = async () => {
       id: `payment-success-${payment.id}`,
       type: "payment-success",
       title: "Payment received",
-      description: `${payment.student.name} paid ${payment.amount.toLocaleString()} EGP for ${monthNames[payment.month - 1]} ${payment.year}.`,
+      description: `${payment.student.name} paid ${payment.amount.toLocaleString()} EGP for ${
+        monthNames[payment.month - 1]
+      } ${payment.year}.`,
       createdAt: payment.paidAt ?? payment.createdAt,
       studentId: payment.student.id,
       studentName: payment.student.name,
@@ -141,7 +183,9 @@ export const getNotificationsService = async () => {
       id: `attendance-absence-${attendance.id}`,
       type: "attendance-absence",
       title: "Student absent",
-      description: `${attendance.student.name} was marked absent on ${attendance.date.toISOString().slice(0, 10)}.`,
+      description: `${attendance.student.name} was marked absent on ${attendance.date
+        .toISOString()
+        .slice(0, 10)}.`,
       createdAt: attendance.date,
       studentId: attendance.student.id,
       studentName: attendance.student.name,
@@ -151,10 +195,13 @@ export const getNotificationsService = async () => {
     });
   }
 
-  notifications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  notifications.sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+  );
 
   return {
     success: true,
     data: notifications,
   };
 };
+

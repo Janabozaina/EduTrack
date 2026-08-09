@@ -1,90 +1,155 @@
-﻿import { Request, Response } from "express";
+﻿import { Response } from "express";
 import {
-  startAttendanceService,
-  stopAttendanceService,
-  getCurrentSessionService,
-  scanAttendanceService,
-  getAttendanceService,
-  saveAttendanceService,
+startAttendanceService,
+stopAttendanceService,
+getCurrentSessionService,
+scanAttendanceService,
+getAttendanceService,
+saveAttendanceService,
 } from "./attendance.service";
+import { AuthRequest } from "../../shared/middleware/auth.middleware";
 
 export const startAttendance = async (
-  _req: Request,
-  res: Response
+req: AuthRequest,
+res: Response
 ) => {
-  const result = await startAttendanceService();
+if (!req.user) {
+return res.status(401).json({
+success: false,
+message: "Unauthorized",
+});
+}
 
-  return res.status(200).json(result);
+const result = await startAttendanceService(req.user.id);
+
+return res.status(200).json(result);
 };
 
 export const stopAttendance = async (
-  _req: Request,
-  res: Response
+req: AuthRequest,
+res: Response
 ) => {
-  const result = await stopAttendanceService();
+if (!req.user) {
+return res.status(401).json({
+success: false,
+message: "Unauthorized",
+});
+}
 
-  return res.status(200).json(result);
+const result = await stopAttendanceService(req.user.id);
+
+return res.status(200).json(result);
 };
 
 export const getCurrentSession = async (
-  _req: Request,
-  res: Response
+req: AuthRequest,
+res: Response
 ) => {
-  const result = await getCurrentSessionService();
+if (!req.user) {
+return res.status(401).json({
+success: false,
+message: "Unauthorized",
+});
+}
 
-  if (!result.success) {
-    return res.status(404).json(result);
-  }
+const result = await getCurrentSessionService(req.user.id);
 
-  return res.status(200).json(result);
+if (!result.success) {
+return res.status(404).json(result);
+}
+
+return res.status(200).json(result);
 };
 
 export const scanAttendance = async (
-  req: Request,
-  res: Response
+req: AuthRequest,
+res: Response
 ) => {
-  const result = await scanAttendanceService(
-    req.body.token as string,
-    req.body.studentId as string
-  );
+if (!req.user) {
+return res.status(401).json({
+success: false,
+message: "Unauthorized",
+});
+}
 
-  if (!result.success) {
-    return res.status(400).json(result);
-  }
+const result = await scanAttendanceService(
+req.body.token as string,
+req.body.studentId as string,
+req.user.id
+);
 
-  return res.status(200).json(result);
+if (!result.success) {
+return res.status(400).json(result);
+}
+
+return res.status(200).json(result);
 };
 
-// GET /api/attendance?groupId=...&date=YYYY-MM-DD
-export const getAttendance = async (req: Request, res: Response) => {
-  const groupId = req.query.groupId as string | undefined;
-  const date = req.query.date as string | undefined;
+export const getAttendance = async (
+req: AuthRequest,
+res: Response
+) => {
+if (!req.user) {
+return res.status(401).json({
+success: false,
+message: "Unauthorized",
+});
+}
 
-  if (!groupId) {
-    return res.status(400).json({ success: false, message: "groupId is required" });
-  }
+const groupId = req.query.groupId as string | undefined;
+const date = req.query.date as string | undefined;
 
-  const result = await getAttendanceService(groupId, date);
+if (!groupId) {
+return res.status(400).json({
+success: false,
+message: "groupId is required",
+});
+}
 
-  return res.status(200).json(result);
+const result = await getAttendanceService(
+groupId,
+date,
+req.user.id
+);
+
+return res.status(200).json(result);
 };
 
-// POST /api/attendance
-// body: { groupId, date, records: [{ studentId, status }] }
-export const saveAttendance = async (req: Request, res: Response) => {
-  const groupId = req.body.groupId as string;
-  const date = req.body.date as string;
-  const records = req.body.records as Array<{ studentId: string; status: "PRESENT" | "ABSENT" }>;
+export const saveAttendance = async (
+req: AuthRequest,
+res: Response
+) => {
+if (!req.user) {
+return res.status(401).json({
+success: false,
+message: "Unauthorized",
+});
+}
 
-  if (!groupId || !date || !Array.isArray(records)) {
-    return res.status(400).json({ success: false, message: "groupId, date and records are required" });
-  }
+const groupId = req.body.groupId as string;
+const date = req.body.date as string;
+const records = req.body.records as Array<{
+studentId: string;
+status: "PRESENT" | "ABSENT";
+}>;
 
-  const result = await saveAttendanceService(groupId, date, records);
+if (!groupId || !date || !Array.isArray(records)) {
+return res.status(400).json({
+success: false,
+message: "groupId, date and records are required",
+});
+}
 
-  if (!result.success) {
-    return res.status(400).json(result);
-  }
+const result = await saveAttendanceService(
+groupId,
+date,
+records,
+req.user.id
+);
 
-  return res.status(200).json(result);
+if (!result.success) {
+return res.status(400).json(result);
+}
+
+return res.status(200).json(result);
 };
