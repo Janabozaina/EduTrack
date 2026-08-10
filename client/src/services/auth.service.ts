@@ -4,6 +4,7 @@ export interface UserSession {
   id: string;
   name: string;
   email: string;
+  role: "ADMIN" | "TEACHER";
 }
 
 export interface LoginResponse {

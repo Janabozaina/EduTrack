@@ -1,11 +1,20 @@
 ﻿import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import { getUser, setUser } from "../../services/auth.service";
-import { changePassword, getProfile, updateProfile } from "../../services/user.service";
+import {
+  changePassword,
+  createUser,
+  deleteUser,
+  getAllUsers,
+  getProfile,
+  updateProfile,
+  updateUser,
+} from "../../services/user.service";
+
+import type { AdminUser } from "../../services/user.service";
 
 interface NotificationPreferences {
   paymentReminders: boolean;
@@ -57,6 +66,19 @@ export default function SettingsPage() {
   const [notifications, setNotifications] = useState<NotificationPreferences>(
     defaultNotifications
   );
+
+  const currentUser = getUser();
+  const isAdmin = currentUser?.role === "ADMIN";
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [savingUser, setSavingUser] = useState(false);
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userPassword, setUserPassword] = useState("");
+  const [userRole, setUserRole] = useState<"ADMIN" | "TEACHER">("TEACHER");
+   
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme-preference") as ThemePreference | null;
@@ -128,6 +150,141 @@ export default function SettingsPage() {
     }
   };
 
+  const loadUsers = async () => {
+  if (!isAdmin) return;
+
+  setLoadingUsers(true);
+
+  try {
+    const result = await getAllUsers();
+
+    if (result.success) {
+      setUsers(result.data || []);
+    } else {
+      toast.error(result.message || "Unable to load users.");
+    }
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.message ||
+        error.message ||
+        "Failed to load users."
+    );
+  } finally {
+    setLoadingUsers(false);
+  }
+};
+
+const resetUserForm = () => {
+  setUserName("");
+  setUserEmail("");
+  setUserPassword("");
+  setUserRole("TEACHER");
+  setEditingUserId(null);
+  setShowUserForm(false);
+};
+
+useEffect(() => {
+  if (isAdmin) {
+    loadUsers();
+  }
+}, [isAdmin]);
+
+const handleUserSubmit = async () => {
+  if (!userName.trim() || !userEmail.trim()) {
+    toast.error("Name and email are required.");
+    return;
+  }
+
+  if (!editingUserId && !userPassword.trim()) {
+    toast.error("Password is required.");
+    return;
+  }
+
+  setSavingUser(true);
+
+  try {
+    if (editingUserId) {
+      const result = await updateUser(
+        editingUserId,
+        userName.trim(),
+        userEmail.trim(),
+        userRole
+      );
+
+      if (!result.success) {
+        toast.error(result.message || "Unable to update user.");
+        return;
+      }
+
+      toast.success("User updated successfully.");
+    } else {
+      const result = await createUser(
+        userName.trim(),
+        userEmail.trim(),
+        userPassword,
+        userRole
+      );
+
+      if (!result.success) {
+        toast.error(result.message || "Unable to create user.");
+        return;
+      }
+
+      toast.success("User created successfully.");
+    }
+
+    resetUserForm();
+    await loadUsers();
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.message ||
+        error.message ||
+        "Failed to save user."
+    );
+  } finally {
+    setSavingUser(false);
+  }
+};
+
+const handleEditUser = (user: AdminUser) => {
+  setEditingUserId(user.id);
+  setUserName(user.name);
+  setUserEmail(user.email);
+  setUserRole(user.role);
+  setUserPassword("");
+  setShowUserForm(true);
+};
+
+const handleDeleteUser = async (user: AdminUser) => {
+  if (user.id === currentUser?.id) {
+    toast.error("You cannot delete your own account.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Are you sure you want to delete ${user.name}?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const result = await deleteUser(user.id);
+
+    if (!result.success) {
+      toast.error(result.message || "Unable to delete user.");
+      return;
+    }
+
+    toast.success("User deleted successfully.");
+    await loadUsers();
+  } catch (error: any) {
+    toast.error(
+      error.response?.data?.message ||
+        error.message ||
+        "Failed to delete user."
+    );
+  }
+};
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error("Please fill in all password fields.");
@@ -413,7 +570,197 @@ export default function SettingsPage() {
               </p>
             </div>
           </Card>
+        {isAdmin && (
+  <Card>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">User Management</h2>
+          <p className="text-sm text-slate-500">
+            Create and manage EduTrack administrator and teacher accounts.
+          </p>
+        </div>
 
+        <Button
+          type="button"
+          onClick={() => {
+            if (showUserForm) {
+              resetUserForm();
+            } else {
+              setShowUserForm(true);
+            }
+          }}
+        >
+          {showUserForm ? "Cancel" : "Add user"}
+        </Button>
+      </div>
+
+      {showUserForm && (
+        <div className="rounded-3xl border border-indigo-100 bg-indigo-50 p-5">
+          <div className="mb-4">
+            <h3 className="font-semibold">
+              {editingUserId ? "Edit user" : "Create new user"}
+            </h3>
+            <p className="text-sm text-slate-500">
+              {editingUserId
+                ? "Update the user's account information and role."
+                : "Add a new teacher or administrator account."}
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-700">
+              Full name
+              <Input
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Enter full name"
+              />
+            </label>
+
+            <label className="block text-sm font-semibold text-slate-700">
+              Email
+              <Input
+                type="email"
+                value={userEmail}
+                onChange={(e) => setUserEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
+            </label>
+
+            {!editingUserId && (
+              <label className="block text-sm font-semibold text-slate-700">
+                Password
+                <Input
+                  type="password"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  placeholder="Minimum 6 characters"
+                />
+              </label>
+            )}
+
+            <label className="block text-sm font-semibold text-slate-700">
+              Role
+              <select
+                value={userRole}
+                onChange={(e) =>
+                  setUserRole(e.target.value as "ADMIN" | "TEACHER")
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-indigo-500"
+              >
+                <option value="TEACHER">Teacher</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-4 flex justify-end gap-3">
+            <Button
+              type="button"
+              onClick={resetUserForm}
+              className="bg-slate-200 text-slate-700 hover:bg-slate-300"
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="button"
+              disabled={savingUser}
+              onClick={handleUserSubmit}
+            >
+              {savingUser
+                ? "Saving..."
+                : editingUserId
+                  ? "Update user"
+                  : "Create user"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {loadingUsers ? (
+        <div className="rounded-3xl bg-slate-50 p-6 text-center text-slate-500">
+          Loading users...
+        </div>
+      ) : users.length === 0 ? (
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-center text-slate-500">
+          No users found.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-3xl border border-slate-200">
+          <table className="w-full min-w-[650px]">
+            <thead className="bg-slate-50">
+              <tr className="text-left text-sm text-slate-500">
+                <th className="px-5 py-4 font-semibold">Name</th>
+                <th className="px-5 py-4 font-semibold">Email</th>
+                <th className="px-5 py-4 font-semibold">Role</th>
+                <th className="px-5 py-4 font-semibold">Created</th>
+                <th className="px-5 py-4 text-right font-semibold">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {users.map((user) => (
+                <tr
+                  key={user.id}
+                  className="border-t border-slate-100"
+                >
+                  <td className="px-5 py-4 font-semibold text-slate-900">
+                    {user.name}
+                  </td>
+
+                  <td className="px-5 py-4 text-sm text-slate-600">
+                    {user.email}
+                  </td>
+
+                  <td className="px-5 py-4">
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${
+                        user.role === "ADMIN"
+                          ? "bg-indigo-100 text-indigo-700"
+                          : "bg-emerald-100 text-emerald-700"
+                      }`}
+                    >
+                      {user.role}
+                    </span>
+                  </td>
+
+                  <td className="px-5 py-4 text-sm text-slate-500">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </td>
+
+                  <td className="px-5 py-4">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEditUser(user)}
+                        className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteUser(user)}
+                        disabled={user.id === currentUser?.id}
+                        className="rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </Card>
+)}
           <Card>
             <div className="space-y-3">
               <div>

@@ -11,6 +11,7 @@ export const getUserProfileService = async (userId: string): Promise<UserProfile
       id: true,
       name: true,
       email: true,
+      role: true,
     },
   });
 
@@ -48,6 +49,7 @@ export const updateUserProfileService = async (
       id: true,
       name: true,
       email: true,
+      role: true,
     },
   });
 
