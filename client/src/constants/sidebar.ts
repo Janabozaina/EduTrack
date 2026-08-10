@@ -45,17 +45,9 @@ export const sidebarLinks = [
     path: "/reports",
     icon: FiBarChart2,
   },
-
-  {
-  title: "Users",
-  path: "/users",
-  icon: FiUsers,
-  adminOnly: true,
-},
   {
     title: "Settings",
     path: "/settings",
     icon: FiSettings,
   },
-  
 ];
