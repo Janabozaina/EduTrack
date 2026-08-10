@@ -4,6 +4,7 @@ import {
   getStudentsService,
   updateStudentService,
   deleteStudentService,
+  getStudentAttendanceService,
 } from "./students.service";
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
 
@@ -61,6 +62,29 @@ export const getStudents = async (
     Number(req.query.page) || 1,
     Number(req.query.limit) || 10
   );
+
+  return res.status(200).json(result);
+};
+
+export const getStudentAttendance = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
+
+  const result = await getStudentAttendanceService(
+    req.params.id as string,
+    req.user.id
+  );
+
+  if (!result.success) {
+    return res.status(404).json(result);
+  }
 
   return res.status(200).json(result);
 };

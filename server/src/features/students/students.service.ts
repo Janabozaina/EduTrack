@@ -230,3 +230,39 @@ export const deleteStudentService = async (
     message: "Student deleted successfully.",
   };
 };
+
+export const getStudentAttendanceService = async (
+  studentId: string,
+  userId: string
+) => {
+  // Make sure the student belongs to the logged-in user
+  const student = await prisma.student.findFirst({
+    where: {
+      id: studentId,
+      class: {
+        userId,
+      },
+    },
+  });
+
+  if (!student) {
+    return {
+      success: false,
+      message: "Student not found.",
+    };
+  }
+
+  const attendances = await prisma.attendance.findMany({
+    where: {
+      studentId,
+    },
+    orderBy: {
+      date: "desc",
+    },
+  });
+
+  return {
+    success: true,
+    data: attendances,
+  };
+};

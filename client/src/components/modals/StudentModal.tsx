@@ -8,6 +8,7 @@ import { getGroups } from "../../services/group.service";
 import {
   createStudent,
   updateStudent,
+  getStudentAttendance,
 } from "../../services/student.service";
 import type { Student } from "../../types/student";
 
@@ -39,6 +40,8 @@ export default function StudentModal({
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const [attendances, setAttendances] = useState<any[]>([]);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [student, setStudent] = useState({
     name: "",
     phone: "",
@@ -54,26 +57,35 @@ export default function StudentModal({
     loadClasses();
 
     if (initialStudent) {
-      setStudent({
-        name: initialStudent.name,
-        phone: initialStudent.phone ?? "",
-        parentPhone: initialStudent.parentPhone ?? "",
-        monthlyFee: String(initialStudent.monthlyFee),
-        classId: initialStudent.class.id,
-        groupId: initialStudent.group.id,
-      });
-      loadGroups(initialStudent.class.id);
-    } else {
-      setStudent({
-        name: "",
-        phone: "",
-        parentPhone: "",
-        monthlyFee: "",
-        classId: "",
-        groupId: "",
-      });
-      setGroups([]);
-    }
+  setStudent({
+    name: initialStudent.name,
+    phone: initialStudent.phone ?? "",
+    parentPhone: initialStudent.parentPhone ?? "",
+    monthlyFee: String(initialStudent.monthlyFee),
+    classId: initialStudent.class.id,
+    groupId: initialStudent.group.id,
+  });
+
+  loadGroups(initialStudent.class.id);
+
+  if (mode === "view") {
+    loadStudentAttendance(initialStudent.id);
+  } else {
+    setAttendances([]);
+  }
+} else {
+  setStudent({
+    name: "",
+    phone: "",
+    parentPhone: "",
+    monthlyFee: "",
+    classId: "",
+    groupId: "",
+  });
+
+  setGroups([]);
+  setAttendances([]);
+}
   }, [open, initialStudent]);
 
   async function loadClasses() {
@@ -99,6 +111,31 @@ export default function StudentModal({
       console.error(error);
     }
   }
+  
+  async function loadStudentAttendance(studentId: string) {
+  setLoadingAttendance(true);
+
+  try {
+    const response = await getStudentAttendance(studentId);
+
+    if (response.success) {
+      setAttendances(response.data || []);
+    } else {
+      setAttendances([]);
+    }
+  } catch (error: any) {
+    console.error("Load Attendance Error:", error);
+
+    toast.error(
+      error.response?.data?.message ||
+        "Failed to load attendance history."
+    );
+
+    setAttendances([]);
+  } finally {
+    setLoadingAttendance(false);
+  }
+}
 
   async function handleClassChange(classId: string) {
     setStudent((prev) => ({
@@ -242,32 +279,127 @@ export default function StudentModal({
                   <p className="font-medium">{initialStudent?.isActive ? "Active" : "Inactive"}</p>
                 </div>
               </div>
+{/* Attendance Summary */}
+<div className="space-y-3 pt-3">
+  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+    Attendance Summary
+  </p>
 
-              {/* Attendance summary (only if attendance data is attached) */}
-              {initialStudent && (initialStudent as any).attendances?.length ? (
-                <div className="space-y-2 pt-2">
-                  <p className="text-xs text-slate-400">Attendance Summary</p>
-                  <div className="grid grid-cols-3 gap-4">
-                    {(() => {
-                      const attends = (initialStudent as any).attendances as Array<any>;
-                      const total = attends.length;
-                      const present = attends.filter((a) => a.status === "PRESENT").length;
-                      const percent = total ? Math.round((present / total) * 100) : 0;
-                      return [
-                        <div key="total">
-                          <p className="text-sm text-slate-500">Total</p>
-                          <p className="font-semibold">{total}</p>
-                        </div>,
-                        <div key="present">
-                          <p className="text-sm text-slate-500">Present</p>
-                          <p className="font-semibold">{present}</p>
-                        </div>,
-                        <div key="percent">
-                          <p className="text-sm text-slate-500">Attendance %</p>
-                          <p className="font-semibold">{percent}%</p>
-                        </div>,
-                      ];
-                    })()}
+  {loadingAttendance ? (
+    <div className="rounded-2xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+      Loading attendance history...
+    </div>
+  ) : (
+    <>
+      {(() => {
+        const total = attendances.length;
+
+        const present = attendances.filter(
+          (a) => a.status === "PRESENT"
+        ).length;
+
+        const absent = attendances.filter(
+          (a) => a.status === "ABSENT"
+        ).length;
+
+        const percent = total
+          ? Math.round((present / total) * 100)
+          : 0;
+
+        return (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-2xl bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">Total</p>
+                <p className="mt-1 text-lg font-bold text-slate-800">
+                  {total}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-emerald-50 p-3">
+                <p className="text-xs text-emerald-600">Present</p>
+                <p className="mt-1 text-lg font-bold text-emerald-700">
+                  {present}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-rose-50 p-3">
+                <p className="text-xs text-rose-600">Absent</p>
+                <p className="mt-1 text-lg font-bold text-rose-700">
+                  {absent}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-700">
+                  Attendance Rate
+                </p>
+
+                <p className="text-lg font-bold text-indigo-600">
+                  {percent}%
+                </p>
+              </div>
+
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full bg-indigo-600 transition-all"
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Recent Attendance
+              </p>
+
+              {total === 0 ? (
+                <div className="mt-2 rounded-2xl bg-slate-50 px-4 py-5 text-center text-sm text-slate-500">
+                  No attendance history available.
+                </div>
+              ) : (
+                <div className="mt-2 max-h-48 space-y-2 overflow-y-auto pr-1">
+                  {attendances.slice(0, 8).map((attendance) => (
+                    <div
+                      key={attendance.id}
+                      className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">
+                          {new Date(
+                            attendance.date
+                          ).toLocaleDateString()}
+                        </p>
+
+                        {attendance.method && (
+                          <p className="text-xs text-slate-400">
+                            Method: {attendance.method}
+                          </p>
+                        )}
+                      </div>
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          attendance.status === "PRESENT"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-rose-100 text-rose-700"
+                        }`}
+                      >
+                        {attendance.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        );
+      })()}
+    </>
+  )}
+</div>
                   </div>
 
                   <div className="pt-2">

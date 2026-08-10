@@ -9,14 +9,6 @@ interface CreateStudentPayload {
   groupId: string;
 }
 
-interface StudentsResponse {
-  success: boolean;
-  total: number;
-  page: number;
-  pages: number;
-  data: any[];
-}
-
 export const getStudents = async (params?: {
   search?: string;
   classId?: string;
@@ -24,9 +16,10 @@ export const getStudents = async (params?: {
   page?: number;
   limit?: number;
 }) => {
-  const response = await api.get<StudentsResponse>("/students", {
+  const response = await api.get("/students", {
     params,
   });
+
   return response.data;
 };
 
@@ -45,5 +38,10 @@ export const updateStudent = async (
 
 export const deleteStudent = async (id: string) => {
   const response = await api.delete(`/students/${id}`);
+  return response.data;
+};
+
+export const getStudentAttendance = async (studentId: string) => {
+  const response = await api.get(`/students/${studentId}/attendance`);
   return response.data;
 };
