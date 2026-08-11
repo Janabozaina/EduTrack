@@ -229,43 +229,44 @@ export default function Navbar() {
             </button>
           )}
         </div>
+</div>
+{/* Mobile Search */}
+<div className="sm:hidden">
+  {!searchOpen ? (
+    <button
+      type="button"
+      onClick={() => setSearchOpen(true)}
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+      aria-label="Search"
+    >
+      <FiSearch size={20} />
+    </button>
+  ) : (
+    <div className="fixed left-3 right-3 top-[68px] z-50 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+      <FiSearch className="ml-2 shrink-0 text-slate-400" />
 
-        {/* Mobile Search */}
-        <div className="relative sm:hidden">
-          {!searchOpen ? (
-            <button
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
-              aria-label="Search"
-            >
-              <FiSearch size={20} />
-            </button>
-          ) : (
-            <div className="absolute left-0 top-12 z-50 flex w-[calc(100vw-24px)] max-w-sm items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-              <FiSearch className="ml-2 shrink-0 text-slate-400" />
+      <input
+        ref={searchRef}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        onKeyDown={handleSearchKeyDown}
+        placeholder="Search students..."
+        className="min-w-0 flex-1 bg-transparent px-1 py-2 text-sm outline-none"
+      />
 
-              <input
-                ref={searchRef}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                placeholder="Search students..."
-                className="min-w-0 flex-1 bg-transparent px-1 py-2 text-sm outline-none"
-              />
+      <button
+        type="button"
+        onClick={clearSearch}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+        aria-label="Close search"
+      >
+        <FiX size={17} />
+      </button>
+    </div>
+  )}
+</div>
 
-              <button
-                type="button"
-                onClick={clearSearch}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                aria-label="Close search"
-              >
-                <FiX size={17} />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+
 
       {/* RIGHT SIDE */}
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
