@@ -1,7 +1,12 @@
 import prisma from "../../shared/lib/prisma";
+import crypto from "crypto";
 
 function generateStudentCode() {
-  return `EDU-${Date.now()}`;
+  return `EDU-${Date.now()}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+}
+
+function generateDeviceToken() {
+  return crypto.randomBytes(32).toString("hex");
 }
 
 interface StudentData {
@@ -17,6 +22,9 @@ interface StudentData {
   isActive?: boolean;
 }
 
+/*
+ * Admin creates a student
+ */
 export const createStudentService = async (
   data: StudentData,
   userId: string
@@ -63,6 +71,130 @@ export const createStudentService = async (
     success: true,
     message: "Student created successfully.",
     data: student,
+  };
+};
+
+/*
+ * Public student registration
+ *
+ * No account is required.
+ * A unique device token is generated and returned once.
+ */
+export const registerStudentService = async (data: {
+  name: string;
+  phone?: string;
+  parentPhone?: string;
+  classId: string;
+  groupId: string;
+}) => {
+  if (!data.name?.trim()) {
+    return {
+      success: false,
+      message: "Student name is required.",
+    };
+  }
+
+  if (!data.classId) {
+    return {
+      success: false,
+      message: "Class is required.",
+    };
+  }
+
+  if (!data.groupId) {
+    return {
+      success: false,
+      message: "Group is required.",
+    };
+  }
+
+  const classExists = await prisma.class.findUnique({
+    where: {
+      id: data.classId,
+    },
+  });
+
+  if (!classExists) {
+    return {
+      success: false,
+      message: "Class not found.",
+    };
+  }
+
+  const groupExists = await prisma.group.findFirst({
+    where: {
+      id: data.groupId,
+      classId: data.classId,
+    },
+  });
+
+  if (!groupExists) {
+    return {
+      success: false,
+      message: "Group not found.",
+    };
+  }
+
+  const studentCode = generateStudentCode();
+  const deviceToken = generateDeviceToken();
+
+  const student = await prisma.student.create({
+    data: {
+      studentCode,
+      deviceToken,
+      name: data.name.trim(),
+      phone: data.phone?.trim() || undefined,
+      parentPhone: data.parentPhone?.trim() || undefined,
+      monthlyFee: 0,
+      classId: data.classId,
+      groupId: data.groupId,
+    },
+    include: {
+      class: true,
+      group: true,
+    },
+  });
+
+  return {
+    success: true,
+    message: "Student registered successfully.",
+    data: {
+      id: student.id,
+      name: student.name,
+      studentCode: student.studentCode,
+      deviceToken: student.deviceToken,
+      class: student.class,
+      group: student.group,
+    },
+  };
+};
+
+/*
+ * Public endpoint used by registration page
+ */
+export const getRegistrationClassesService = async () => {
+  const classes = await prisma.class.findMany({
+    select: {
+      id: true,
+      title: true,
+      groups: {
+        select: {
+          id: true,
+          name: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      },
+    },
+    orderBy: {
+      title: "asc",
+    },
+  });
+
+  return {
+    success: true,
+    data: classes,
   };
 };
 
@@ -235,7 +367,6 @@ export const getStudentAttendanceService = async (
   studentId: string,
   userId: string
 ) => {
-  // Make sure the student belongs to the logged-in user
   const student = await prisma.student.findFirst({
     where: {
       id: studentId,

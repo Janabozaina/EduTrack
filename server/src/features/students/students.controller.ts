@@ -1,13 +1,20 @@
 import { Response } from "express";
+
 import {
   createStudentService,
+  registerStudentService,
+  getRegistrationClassesService,
   getStudentsService,
   updateStudentService,
   deleteStudentService,
   getStudentAttendanceService,
 } from "./students.service";
+
 import { AuthRequest } from "../../shared/middleware/auth.middleware";
 
+/*
+ * ADMIN - Create student
+ */
 export const createStudent = async (
   req: AuthRequest,
   res: Response
@@ -41,6 +48,58 @@ export const createStudent = async (
   }
 
   return res.status(201).json(result);
+};
+
+/*
+ * PUBLIC - Student self registration
+ */
+export const registerStudent = async (
+  req: any,
+  res: Response
+) => {
+  try {
+    const result = await registerStudentService({
+      name: req.body.name,
+      phone: req.body.phone,
+      parentPhone: req.body.parentPhone,
+      classId: req.body.classId,
+      groupId: req.body.groupId,
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(201).json(result);
+  } catch (error) {
+    console.error("Student Registration Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to register student.",
+    });
+  }
+};
+
+/*
+ * PUBLIC - Get classes/groups for registration
+ */
+export const getRegistrationClasses = async (
+  _req: any,
+  res: Response
+) => {
+  try {
+    const result = await getRegistrationClassesService();
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Registration Classes Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load classes.",
+    });
+  }
 };
 
 export const getStudents = async (
@@ -148,4 +207,3 @@ export const deleteStudent = async (
 
   return res.status(200).json(result);
 };
-

@@ -1,4 +1,5 @@
 import { Router } from "express";
+
 import {
   startAttendance,
   stopAttendance,
@@ -8,20 +9,25 @@ import {
   saveAttendance,
 } from "./attendance.controller";
 
+import { authenticate } from "../../shared/middleware/auth.middleware";
+
 const router = Router();
 
-router.post("/start", startAttendance);
+// Teacher routes
+router.post("/start", authenticate, startAttendance);
 
-router.post("/stop", stopAttendance);
+router.post("/stop", authenticate, stopAttendance);
 
-router.get("/current", getCurrentSession);
+router.get("/current", authenticate, getCurrentSession);
 
+// PUBLIC
+// Student scans QR without an account/login
 router.post("/scan", scanAttendance);
 
-// Get attendance for a group and date
-router.get("/", getAttendance);
+// Teacher attendance history
+router.get("/", authenticate, getAttendance);
 
-// Save attendance records for a group and date
-router.post("/", saveAttendance);
+// Teacher manual attendance
+router.post("/", authenticate, saveAttendance);
 
 export default router;

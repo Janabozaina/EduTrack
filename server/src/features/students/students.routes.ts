@@ -1,7 +1,9 @@
 import { Router } from "express";
-import { authenticate } from "../../shared/middleware/auth.middleware";
+
 import {
   createStudent,
+  registerStudent,
+  getRegistrationClasses,
   getStudents,
   getStudentAttendance,
   updateStudent,
@@ -10,6 +12,18 @@ import {
 
 const router = Router();
 
+/*
+ * PUBLIC STUDENT REGISTRATION
+ *
+ * No login required.
+ */
+router.post("/register", registerStudent);
+
+router.get("/registration-classes", getRegistrationClasses);
+
+/*
+ * EXISTING ADMIN ROUTES
+ */
 router.post("/", createStudent);
 
 router.get("/", getStudents);
