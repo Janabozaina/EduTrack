@@ -6,7 +6,8 @@ import {
   FiSearch,
   FiX,
 } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+
 import { useSidebar } from "../../context/SidebarContext";
 import { getNotifications } from "../../services/notification.service";
 import { getUser, logout } from "../../services/auth.service";
@@ -14,11 +15,12 @@ import { getUser, logout } from "../../services/auth.service";
 export default function Navbar() {
   const { setOpen } = useSidebar();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState<{ name: string } | null>(null);
+
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
-
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -43,13 +45,18 @@ export default function Navbar() {
     setUser(getUser());
   }, []);
 
+  // Keep search synced with URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearch(params.get("search") || "");
+  }, [location.search]);
+
+  // Close notification dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(target)
+        !dropdownRef.current.contains(event.target as Node)
       ) {
         setDropdownOpen(false);
       }
@@ -62,6 +69,15 @@ export default function Navbar() {
     };
   }, []);
 
+  // Focus search input when opened
+  useEffect(() => {
+    if (searchOpen) {
+      setTimeout(() => {
+        searchRef.current?.focus();
+      }, 50);
+    }
+  }, [searchOpen]);
+
   useEffect(() => {
     loadNotifications();
   }, []);
@@ -72,13 +88,51 @@ export default function Navbar() {
     }
   }, [dropdownOpen]);
 
-  useEffect(() => {
-    if (searchOpen) {
-      setTimeout(() => {
-        searchRef.current?.focus();
-      }, 50);
+  const handleSearchSubmit = () => {
+    const value = search.trim();
+
+    const params = new URLSearchParams();
+
+    if (value) {
+      params.set("search", value);
     }
-  }, [searchOpen]);
+
+    navigate({
+      pathname: "/students",
+      search: params.toString(),
+    });
+
+    setSearchOpen(false);
+  };
+
+  const handleSearchKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleSearchSubmit();
+    }
+
+    if (event.key === "Escape") {
+      setSearchOpen(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearch("");
+
+    if (location.pathname === "/students") {
+      navigate(
+        {
+          pathname: "/students",
+          search: "",
+        },
+        { replace: true }
+      );
+    }
+
+    setSearchOpen(false);
+  };
 
   const handleLogout = () => {
     logout();
@@ -138,47 +192,22 @@ export default function Navbar() {
     setDropdownOpen((open) => !open);
   };
 
-  const handleSearch = () => {
-    const value = search.trim();
-
-    if (!value) {
-      navigate("/students");
-      return;
-    }
-
-    navigate(`/students?search=${encodeURIComponent(value)}`);
-    setSearchOpen(false);
-  };
-
-  const handleSearchKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (event.key === "Enter") {
-      handleSearch();
-    }
-
-    if (event.key === "Escape") {
-      setSearchOpen(false);
-      setSearch("");
-    }
-  };
-
   return (
-    <header className="sticky top-0 z-40 flex min-h-[72px] w-full items-center justify-between gap-3 border-b border-slate-200 bg-white px-3 sm:px-4 md:px-6">
-      {/* Left side */}
-      <div className="flex min-w-0 flex-1 items-center gap-3">
+    <header className="sticky top-0 z-40 flex h-16 min-w-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-3 shadow-sm sm:px-4 lg:px-6">
+      {/* LEFT SIDE */}
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         {/* Mobile menu */}
         <button
           type="button"
-          onClick={() => setOpen(true)}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 lg:hidden"
+          onClick={() => setOpen(true)}
           aria-label="Open menu"
         >
           <FiMenu size={21} />
         </button>
 
         {/* Desktop Search */}
-        <div className="hidden w-full max-w-sm items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 md:flex">
+        <div className="hidden min-w-0 max-w-md flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 sm:flex md:max-w-lg">
           <FiSearch className="shrink-0 text-slate-400" />
 
           <input
@@ -186,64 +215,60 @@ export default function Navbar() {
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             placeholder="Search students..."
-            className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
           />
 
           {search && (
             <button
               type="button"
-              onClick={() => setSearch("")}
-              className="text-slate-400 transition hover:text-slate-700"
+              onClick={clearSearch}
+              className="shrink-0 text-slate-400 transition hover:text-slate-700"
               aria-label="Clear search"
             >
-              <FiX size={16} />
+              <FiX size={17} />
             </button>
           )}
         </div>
 
         {/* Mobile Search */}
-        {searchOpen && (
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:hidden">
-            <FiSearch className="shrink-0 text-slate-400" />
-
-            <input
-              ref={searchRef}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="Search students..."
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
-            />
-
+        <div className="relative sm:hidden">
+          {!searchOpen ? (
             <button
               type="button"
-              onClick={() => {
-                setSearch("");
-                setSearchOpen(false);
-              }}
-              className="shrink-0 text-slate-400"
-              aria-label="Close search"
+              onClick={() => setSearchOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+              aria-label="Search"
             >
-              <FiX size={18} />
+              <FiSearch size={20} />
             </button>
-          </div>
-        )}
+          ) : (
+            <div className="absolute left-0 top-12 z-50 flex w-[calc(100vw-24px)] max-w-sm items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+              <FiSearch className="ml-2 shrink-0 text-slate-400" />
+
+              <input
+                ref={searchRef}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Search students..."
+                className="min-w-0 flex-1 bg-transparent px-1 py-2 text-sm outline-none"
+              />
+
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close search"
+              >
+                <FiX size={17} />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Right side */}
+      {/* RIGHT SIDE */}
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-        {/* Mobile Search button */}
-        {!searchOpen && (
-          <button
-            type="button"
-            onClick={() => setSearchOpen(true)}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 md:hidden"
-            aria-label="Search"
-          >
-            <FiSearch size={20} />
-          </button>
-        )}
-
         {/* Notifications */}
         <div className="relative" ref={dropdownRef}>
           <button
@@ -252,7 +277,7 @@ export default function Navbar() {
             className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
             aria-label="Notifications"
           >
-            <FiBell size={20} />
+            <FiBell size={21} />
 
             {unreadCount > 0 && (
               <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white">
@@ -309,7 +334,7 @@ export default function Navbar() {
                         }`}
                       >
                         <div className="flex w-full items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-slate-900">
+                          <p className="truncate text-sm font-semibold text-slate-900">
                             {item.title}
                           </p>
 
@@ -327,7 +352,9 @@ export default function Navbar() {
                           {item.groupName && <span>{item.groupName}</span>}
 
                           <span>
-                            {new Date(item.createdAt).toLocaleDateString()}
+                            {new Date(
+                              item.createdAt
+                            ).toLocaleDateString()}
                           </span>
                         </div>
                       </button>
@@ -339,17 +366,7 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Logout - desktop */}
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="hidden items-center rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 md:inline-flex"
-        >
-          <FiLogOut className="mr-2" />
-          Logout
-        </button>
-
-        {/* Logout - mobile */}
+        {/* Mobile Logout */}
         <button
           type="button"
           onClick={handleLogout}
@@ -359,14 +376,24 @@ export default function Navbar() {
           <FiLogOut size={19} />
         </button>
 
+        {/* Desktop Logout */}
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="hidden rounded-2xl border border-slate-200 px-3 py-2 text-sm font-semibold transition hover:bg-slate-100 md:inline-flex md:items-center"
+        >
+          <FiLogOut className="mr-2" />
+          Logout
+        </button>
+
         {/* User */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 font-bold text-white">
+        <div className="flex shrink-0 items-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 font-bold text-white">
             {user?.name?.[0] ?? "U"}
           </div>
 
-          <div className="hidden md:block">
-            <p className="font-semibold">
+          <div className="ml-3 hidden lg:block">
+            <p className="font-semibold text-slate-900">
               {user?.name ?? "Administrator"}
             </p>
 
